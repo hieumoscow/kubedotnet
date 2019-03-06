@@ -1,0 +1,42 @@
+@{
+    ViewData["Title"] = "Pets";
+}
+<style>
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 15px;
+  text-align: left;
+}
+
+</style>
+
+<h2>Pets</h2>
+
+<table style="width:100%">
+    <tr>
+            <th>Animal Type</th>
+            <th>Created</th>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Tags</th>
+            <th><a asp-action="AddOrEdit">Add</a></th>
+    </tr>
+    @foreach (var pet in  (List<Pet>)ViewData["Pets"])
+    {
+        <tr>
+            <td>@pet.animal_type</td>
+            <td>@pet.created</td>
+            <td>@pet.id</td>
+            <td>@pet.name</td>
+            <td>@pet.tags</td>
+            <td>
+                <a asp-action="AddOrEdit" asp-route-id="@pet.id">Edit</a> |
+                <a asp-action="Delete" asp-route-id="@pet.id"  onclick="return confirm('Are you sure to delete this record?')"> Delete</a>
+            </td>
+        </tr>
+    }
+  
+</table>

@@ -1,0 +1,50 @@
+pool:
+  name: 'azure-pool'
+
+trigger:
+  batch: true
+  branches:
+    include: 
+    - refs/heads/*
+  paths:
+    include: 
+    - polyglotcontainers/kubedotnet
+
+
+variables:
+  projectName: kubedotnet
+  registryServerName: "$(registryName).azurecr.io"
+  imageName: "$(projectName)"
+  # define 4 more variables: tenantId, registryName, registryLogin and registryPassword in the build pipeline in UI
+
+
+steps:
+- bash: docker build -f $(system.defaultWorkingDirectory)/$(projectRootFolder)/$(projectName)/Dockerfile -t $(registryServerName)/$(imageName):$(build.buildId) -t $(registryServerName)/$(imageName):latest $(system.defaultWorkingDirectory)/$(projectRootFolder)/$(projectName)
+  displayName: 'docker build'
+
+- bash: docker login $(registryServerName) -u $(registryLogin) -p $(registryPassword)
+  displayName: 'docker login'
+
+
+- bash: |
+    docker tag $(registryServerName)/$(imageName):$(build.buildId)
+    docker tag $(registryServerName)/$(imageName):latest
+    docker push $(registryServerName)/$(imageName):$(build.buildId)
+    docker push $(registryServerName)/$(imageName):latest
+  displayName: 'docker push'
+  condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/master'))
+
+- task: HelmInstaller@0
+  displayName: 'Install Helm'
+  inputs:
+    helmVersion: 2.12.3
+
+- bash: helm package --version $(build.buildId) --destination $(build.artifactStagingDirectory) $(system.defaultWorkingDirectory)/$(projectRootFolder)/$(projectName)/charts/$(projectName)
+  displayName: 'helm package'
+  
+- bash: az login --service-principal -u $(appId) -p $(clientSecret) -t $(tenantId)
+  displayName: 'az login'
+
+- bash: az acr helm push -n $(registryName) $(build.artifactStagingDirectory)/$(projectName)-$(build.buildId).tgz
+  displayName: 'az acr helm push'
+  condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/master'))
